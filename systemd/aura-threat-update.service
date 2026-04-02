@@ -1,0 +1,8 @@
+[Unit]
+Description=Aura Linux Threat Intelligence Updater
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/threat_intel.py
+User=root
