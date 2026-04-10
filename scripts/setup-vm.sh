@@ -1,52 +1,76 @@
 #!/bin/bash
 set -e
 
-echo "=== Aura Linux VM Setup Script ==="
-echo "This will install: Ollama, nftables, Python dependencies"
+echo "=========================================="
+echo "   Aura Linux - VM Setup Script"
+echo "=========================================="
 
-# Update system
-sudo apt update
-
-# Install base packages
-sudo apt install -y python3 python3-pip nftables curl git
-
-# Install Ollama (SAFE WAY)
-echo "Installing Ollama..."
-
-INSTALL_SCRIPT="ollama_install.sh"
-
-# Download with retry + resume + HTTP/1.1
-curl --http1.1 -L \
-  --retry 5 \
-  --retry-delay 5 \
-  --continue-at - \
-  https://ollama.com/install.sh \
-  -o $INSTALL_SCRIPT
-
-# Validate download
-if [ ! -s "$INSTALL_SCRIPT" ]; then
-  echo "❌ Failed to download Ollama install script"
-  exit 1
+# Check if Ollama is installed
+if ! command -v ollama &> /dev/null; then
+    echo "⚠️ Ollama not found!"
+    
+    # Check if aria2 is installed, if not install it
+    if ! command -v aria2c &> /dev/null; then
+        echo "Installing aria2 for faster downloads..."
+        sudo apt update
+        sudo apt install -y aria2
+    fi
+    
+    echo "Downloading Ollama with aria2..."
+    aria2c -x 16 -s 16 -o ollama_install.sh https://ollama.com/install.sh
+    
+    echo "Installing Ollama..."
+    sh ollama_install.sh
+    rm ollama_install.sh
+    
+    echo "✅ Ollama installed successfully"
 fi
 
-# Run install script
-sh $INSTALL_SCRIPT
-
-# Pull model (retry-safe)
-echo "Pulling llama3.2:1b model..."
-
-n=0
-until [ $n -ge 5 ]
-do
-  ollama pull llama3.2:1b && break
-  n=$((n+1))
-  echo "Retrying model pull ($n/5)..."
-  sleep 5
-done
-
-if [ $n -eq 5 ]; then
-  echo "❌ Failed to pull model after retries"
-  exit 1
+# Check if model exists
+if ! ollama list | grep -q "llama3.2:1b"; then
+    echo "⚠️ Model not found. Pulling llama3.2:1b..."
+    ollama pull llama3.2:1b
+else
+    echo "✅ Model already present"
 fi
 
-echo "Setup complete!"
+# Copy firewall files
+echo "[5/8] Installing firewall files..."
+sudo cp src/threat_intel.py /usr/local/bin/
+sudo cp src/firewall_daemon.py /usr/local/bin/
+sudo chmod +x /usr/local/bin/*.py
+
+# Create data directory
+echo "[6/8] Creating data directories..."
+sudo mkdir -p /var/lib/aura-firewall/blacklists
+
+# Install systemd services
+echo "[7/8] Installing systemd services..."
+sudo cp systemd/aura-firewall.service /etc/systemd/system/
+sudo cp systemd/aura-threat-update.service /etc/systemd/system/
+sudo cp systemd/aura-threat-update.timer /etc/systemd/system/
+
+# Reload and start
+sudo systemctl daemon-reload
+sudo systemctl enable aura-firewall
+sudo systemctl start aura-firewall
+sudo systemctl enable aura-threat-update.timer
+sudo systemctl start aura-threat-update.timer
+
+# Download initial threat feeds
+echo "[8/8] Downloading threat feeds..."
+sudo python3 /usr/local/bin/threat_intel.py
+
+echo ""
+echo "=========================================="
+echo "   Setup Complete!"
+echo "=========================================="
+
+# Show status
+sudo systemctl status aura-firewall --no-pager
+echo ""
+echo "Threat feed size:"
+wc -l /var/lib/aura-firewall/malicious_ips.txt
+echo ""
+echo "Firewall logs:"
+sudo tail -10 /var/log/aura-firewall.log
