@@ -1,26 +1,34 @@
 #!/usr/bin/env python3
 """
-Aura Linux Firewall - Layer 0
+Aura Linux Firewall Layer 0 + AI Layer
 Blocks known malicious IPs from threat feeds.
-No AI yet - but already better than Ubuntu's default firewall.
+Uses AI for unknown (gray area) IPs.
 """
 
 import logging
 import subprocess
 import sys
 import time
-from typing import Set
+import os
 import ipaddress
+from typing import Set
 
 # Import our threat intel module
 from threat_intel import load_blacklist
 
+# Import AI decision module
+from ai_decision import ask_about_ip
+
 # Configuration
-CHECK_INTERVAL_SEC = 5  # Check every 5 seconds (faster than AI version)
+CHECK_INTERVAL_SEC = 5
 LOG_FILE = "/var/log/aura-firewall.log"
 NFT_TABLE = "aura_filter"
 NFT_CHAIN = "aura_block"
+WHITELIST_FILE = "/var/lib/aura-firewall/whitelist.txt"
 
+# ----------------------------------------------------------------------
+# Logging Setup
+# ----------------------------------------------------------------------
 def setup_logging():
     logger = logging.getLogger("AuraFirewall")
     logger.setLevel(logging.INFO)
@@ -37,6 +45,19 @@ def setup_logging():
 
 logger = setup_logging()
 
+# ----------------------------------------------------------------------
+# Whitelist Functions
+# ----------------------------------------------------------------------
+def load_whitelist() -> Set[str]:
+    """Load known good IPs."""
+    if not os.path.exists(WHITELIST_FILE):
+        return set()
+    with open(WHITELIST_FILE, 'r') as f:
+        return {line.strip() for line in f if line.strip() and not line.startswith('#')}
+
+# ----------------------------------------------------------------------
+# nftables Functions
+# ----------------------------------------------------------------------
 def nft_init():
     """Initialize nftables table and chain."""
     subprocess.run(f"nft add table inet {NFT_TABLE} 2>/dev/null", shell=True)
@@ -79,6 +100,9 @@ def load_blocked_ips_from_nft() -> Set[str]:
     )
     return {line.strip() for line in result.stdout.splitlines() if line.strip()}
 
+# ----------------------------------------------------------------------
+# Connection Monitoring
+# ----------------------------------------------------------------------
 def get_active_remote_ips() -> Set[str]:
     """Get currently connected remote IPs."""
     result = subprocess.run(["ss", "-tn"], capture_output=True, text=True)
@@ -98,24 +122,24 @@ def get_active_remote_ips() -> Set[str]:
         # Validate IPv4
         if ip.count('.') == 3:
             try:
-                ipaddress.ip_address(ip)  # Validate
+                ipaddress.ip_address(ip)
                 ips.add(ip)
             except ValueError:
-                # Invalid IP address format - skip it
                 continue
             except Exception as e:
-                # Catch any other unexpected error but log it
                 logger.warning(f"Unexpected error validating IP {ip}: {e}")
                 continue
     
     return ips
 
+# ----------------------------------------------------------------------
+# Blacklist Sync
+# ----------------------------------------------------------------------
 def sync_blacklist():
     """Load latest blacklist and ensure all IPs are blocked."""
     malicious_ips = load_blacklist()
     currently_blocked = load_blocked_ips_from_nft()
     
-    # Block IPs that aren't blocked yet
     for ip in malicious_ips:
         if ip not in currently_blocked:
             block_ip(ip, "threat_feed")
@@ -123,16 +147,21 @@ def sync_blacklist():
     logger.info(f"Blacklist sync complete: {len(malicious_ips)} IPs in blacklist, {len(currently_blocked)} currently blocked")
     return malicious_ips
 
+# ----------------------------------------------------------------------
+# Main Monitoring Loop
+# ----------------------------------------------------------------------
 def monitor_connections():
-    """Main monitoring loop."""
+    """Main monitoring loop with AI for gray-area IPs."""
     nft_init()
     
-    # Initial blacklist sync
+    # Initial sync
     malicious_ips = sync_blacklist()
+    whitelist = load_whitelist()
     
     logger.info("=" * 50)
-    logger.info("Aura Firewall Started (Layer 0 - Threat Feed Mode)")
+    logger.info("Aura Firewall Started (AI Enhanced Mode)")
     logger.info(f"Loaded {len(malicious_ips)} malicious IPs from blacklist")
+    logger.info(f"Loaded {len(whitelist)} IPs in whitelist")
     logger.info(f"Monitoring every {CHECK_INTERVAL_SEC} seconds")
     logger.info("=" * 50)
     
@@ -144,22 +173,40 @@ def monitor_connections():
             new_ips = current_ips - processed_ips
             
             for ip in new_ips:
+                # Skip if already blocked
                 if is_ip_blocked(ip):
                     logger.info(f"{ip} already blocked")
                     processed_ips.add(ip)
                     continue
                 
+                # Layer 1: Check blacklist
                 if ip in malicious_ips:
                     logger.warning(f"⚠️ MALICIOUS IP detected: {ip} - blocking")
                     block_ip(ip, "threat_feed_active")
+                
+                # Layer 2: Check whitelist
+                elif ip in whitelist:
+                    logger.info(f"✓ IP {ip} is whitelisted - allowing")
+                
+                # Layer 3: Gray area - Ask AI
                 else:
-                    logger.info(f"✓ IP {ip} is clean (not in blacklist)")
+                    logger.info(f"🤔 Unknown IP {ip} - asking AI...")
+                    is_malicious, explanation, confidence = ask_about_ip(ip)
+                    
+                    if is_malicious:
+                        logger.warning(f"🤖 AI says {ip} is MALICIOUS (confidence: {confidence})")
+                        logger.warning(f"   Reason: {explanation}")
+                        block_ip(ip, f"ai_decision_{confidence}")
+                    else:
+                        logger.info(f"🤖 AI says {ip} is safe (confidence: {confidence})")
+                        logger.info(f"   Reason: {explanation}")
                 
                 processed_ips.add(ip)
             
-            # Periodically reload blacklist (in case it updated)
-            if int(time.time()) % 300 < CHECK_INTERVAL_SEC:  # Every ~5 minutes
+            # Periodically reload blacklist and whitelist
+            if int(time.time()) % 300 < CHECK_INTERVAL_SEC:
                 malicious_ips = sync_blacklist()
+                whitelist = load_whitelist()
             
             time.sleep(CHECK_INTERVAL_SEC)
     
@@ -167,6 +214,9 @@ def monitor_connections():
         logger.info("Shutting down...")
         sys.exit(0)
 
+# ----------------------------------------------------------------------
+# Entry Point
+# ----------------------------------------------------------------------
 def main():
     monitor_connections()
 
