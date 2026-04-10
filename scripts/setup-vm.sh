@@ -26,14 +26,6 @@ if ! command -v ollama &> /dev/null; then
     echo "✅ Ollama installed successfully"
 fi
 
-# Check if model exists
-if ! ollama list | grep -q "llama3.2:1b"; then
-    echo "⚠️ Model not found. Pulling llama3.2:1b..."
-    ollama pull llama3.2:1b
-else
-    echo "✅ Model already present"
-fi
-
 # Copy firewall files
 echo "[5/8] Installing firewall files..."
 sudo cp src/threat_intel.py /usr/local/bin/
