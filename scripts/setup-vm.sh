@@ -7,20 +7,40 @@ echo "=========================================="
 
 # Check if Ollama is installed
 if ! command -v ollama &> /dev/null; then
-    echo "⚠️ Ollama not found!"
+    echo "⚠️ Ollama not found! installation started"
+    if ! command -v aria2c &> /dev/null; then
+        sudo apt update
+        sudo apt install -y aria2
+    fi
+    
+    aria2c -x 16 -s 16 -o ollama_install.sh https://ollama.com/install.sh
+    sh ollama_install.sh
+    rm ollama_install.sh
 fi
 
-# Start Ollama service if not running
-echo "[1/8] Starting Ollama service..."
-if ! systemctl is-active --quiet ollama; then
-    echo "Starting Ollama service..."
+# Create systemd service for Ollama if not exists
+if [ ! -f /etc/systemd/system/ollama.service ]; then
+    echo "Creating Ollama systemd service..."
+    sudo tee /etc/systemd/system/ollama.service > /dev/null <<EOF
+[Unit]
+Description=Aura-Linux AI Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/ollama serve
+Restart=always
+RestartSec=10
+User=root
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    sudo systemctl daemon-reload
+    sudo systemctl enable ollama
     sudo systemctl start ollama
-    # Wait for service to be ready
     sleep 3
 fi
-
-# Enable Ollama to start on boot
-sudo systemctl enable ollama
 
 # Check if AI model is pulled
 echo "[2/8] Checking AI model..."
