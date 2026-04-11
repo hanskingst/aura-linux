@@ -29,18 +29,25 @@ def explain_ip(ip: str) -> str:
     
     # Get relevant logs
     logs = get_logs_for_ip(ip)
+
+    if "No logs found" in logs:
+       return f"No firewall activity found for IP {ip}, It was likely not blocked or did not interact with the system."
     
-    prompt = f"""You are Aura Firewall's intelligence that get relevant logs about the IP {ip}."
+    prompt = f"""You are Aura Firewall's intelligence that analyzes firewall logs for {ip}."
 
 Here are the relevant logs:
 {logs}
 
-Based on these logs, explain in 2-3 sentences:
-1. Whether or not the IP was blocked by Aura firewall
-2. What action was taken by Aura firewall
-3. What the user should do (if anything)
+IMPORTANT:
+- If logs says "No logs found", clearly state that there is no evidence of interaction with the firewall.
+-Do Not assume the IP was blocked without evidence.
 
-Be helpful and conversational, but technical."""
+Based on these logs, explain in 2-3 sentences:
+1. Whether or not the IP was blocked by Aura firewall (based only on logs)
+2. What action was taken by Aura firewall (if any)
+3. What the user should do
+
+Be helpful,precised, avoid guessing and be conversational, but technical."""
 
     payload = {
         "model": MODEL_NAME,
