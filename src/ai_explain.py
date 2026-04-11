@@ -29,9 +29,6 @@ def explain_ip(ip: str) -> str:
     
     # Get relevant logs
     logs = get_logs_for_ip(ip)
-
-    if "No logs found" in logs:
-       return f"No firewall activity found for IP {ip}, It was likely not blocked or did not interact with the system."
     
     prompt = f"""You are Aura Firewall's intelligence that analyzes firewall logs for {ip}."
 
