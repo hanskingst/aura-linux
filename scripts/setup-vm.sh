@@ -44,12 +44,12 @@ fi
 
 # Check if AI model is pulled
 echo "[2/8] Checking AI model..."
-if ollama list 2>/dev/null | grep -q "llama3.2:1b"; then
+if [ -d "$HOME/.ollama/models/blobs" ] && ls ~/.ollama/models/blobs/ | grep -q .; then
     echo "✅ Model already present"
 else
-    echo "⚠️ Model not found. Pulling llama3.2:1b (this may take a few minutes)..."
+    echo "⚠️ Model not found. Pulling llama3.2:1b..."
     ollama pull llama3.2:1b
-    echo "✅ Model pulled successfully"
+    echo "model pulled successfully"
 fi
 
 # Copy firewall files

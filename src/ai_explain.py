@@ -50,7 +50,7 @@ Be helpful and conversational, but technical."""
     }
     
     try:
-        response = requests.post(OLLAMA_URL, json=payload, timeout=30)
+        response = requests.post(OLLAMA_URL, json=payload, timeout=500)
         response.raise_for_status()
         result = response.json()
         return result.get("response", "Unable to generate explanation")
@@ -116,7 +116,7 @@ Be professional but friendly."""
     }
     
     try:
-        response = requests.post(OLLAMA_URL, json=payload, timeout=30)
+        response = requests.post(OLLAMA_URL, json=payload, timeout=500)
         response.raise_for_status()
         result = response.json()
         return result.get("response", "Unable to generate health report")

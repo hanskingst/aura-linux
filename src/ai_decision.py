@@ -44,7 +44,7 @@ Only respond with valid JSON. No other text."""
     }
     
     try:
-        response = requests.post(OLLAMA_URL, json=payload, timeout=30)
+        response = requests.post(OLLAMA_URL, json=payload, timeout=500)
         response.raise_for_status()
         result = response.json()
         
