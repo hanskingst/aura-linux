@@ -30,7 +30,7 @@ def explain_ip(ip: str) -> str:
     # Get relevant logs
     logs = get_logs_for_ip(ip)
     
-    prompt = f"""You are Aura Firewall's explanation engine. A user asked: "Why was {ip} blocked or not?"
+    prompt = f"""You are Aura Firewall's explanation engine. A user asked: "Why Aura-firewall blocked or not IP {ip}?"
 
 Here are the relevant logs:
 {logs}
