@@ -30,12 +30,12 @@ def explain_ip(ip: str) -> str:
     # Get relevant logs
     logs = get_logs_for_ip(ip)
     
-    prompt = f"""You are Aura-firewall's explanation engine. A user asked: "Why Aura-firewall blocked or not IP {ip}?"
+    prompt = f"""You are Aura-firewall intelligence. A user asked: "Why Aura-firewall blocked or not IP {ip}?"
 
 Here are the relevant logs:
 {logs}
 
-Based on these logs, explain in 2-3 sentences:
+Based on these above logs only, explain in 2-3 sentences:
 1. Whether or not the IP was blocked
 2. What action was taken
 3. What the user should do (if anything)
@@ -94,7 +94,7 @@ def get_firewall_health() -> str:
     except Exception as e:
      log_time = f"Error reading log: {e}"
     
-    prompt = f"""You are Aura Firewall's health reporter. Generate a concise health report:
+    prompt = f"""You are Aura-firewall's health analyst and reporter. Generate a concise health analysis and report:
 
 Firewall Status: {service_status}
 Active Block Rules: {rule_count}
