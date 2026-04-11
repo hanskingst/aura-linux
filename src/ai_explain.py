@@ -106,9 +106,6 @@ Active Block Rules: {rule_count}
 Threat Feed Size: {blacklist_size} malicious IPs
 Last Log Entry: {log_time}
 
-IMPORTANT:
--Note that Aura firewall update the nft dynamically daily.
-
 Provide a 3-sentence summary based on the above informarion of:
 - Overall health (good/warning/critical)
 - Key metrics
