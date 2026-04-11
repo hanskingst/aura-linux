@@ -38,13 +38,16 @@ Here are the relevant logs:
 IMPORTANT:
 - If logs says "No logs found", clearly state that there is no evidence of interaction with the firewall.
 -Do Not assume the IP was blocked without evidence.
+-Note that aura firewall is powered by you, The logic integrates you to check,validate, block unknown IPs.
+-Note that for known malicious and non malicious IPs the aura firewall relies just on Logic.
+-Note that Aura firewall integrates you in its logic and that you are part of the system not a separate entity.
 
 Based on these logs, explain in 2-3 sentences:
 1. Whether or not the IP was blocked by Aura firewall (based only on logs)
-2. What action was taken by Aura firewall (if any)
+2. What action was taken by Aura firewall
 3. What the user should do
 
-Be helpful,precised, avoid guessing and be conversational, but technical."""
+Be helpful, and conversational, but technical."""
 
     payload = {
         "model": MODEL_NAME,
@@ -104,6 +107,10 @@ Firewall Status: {service_status}
 Active Block Rules: {rule_count}
 Threat Feed Size: {blacklist_size} malicious IPs
 Last Log Entry: {log_time}
+
+IMPORTANT:
+-Note that Aura firewall update the nft dynamically daily.
+-Note that Aura firewall integrates you in its logic so you are part of the system not an external entity.
 
 Provide a 3-sentence summary based on the above informarion of:
 - Overall health (good/warning/critical)
