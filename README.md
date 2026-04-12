@@ -27,7 +27,7 @@ An Ubuntu-based Linux distribution with an AI-powered firewall using local LLM i
 
 This is the architectural diagram of Aura linux system.
 
-![Aura Linux System Architecture](docs/images/aura-architecture.png)
+![Aura Linux System Architecture](docs/images/aura_architecture.png)
 
 This is the architecture of the whole system weather you installed the custom ubuntu iso with packages preinstalled or you install them on any ubuntu system.
 
