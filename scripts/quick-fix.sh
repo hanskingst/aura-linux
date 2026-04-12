@@ -3,18 +3,40 @@ echo "=========================================="
 echo "   Aura Linux - Quick Fix"
 echo "=========================================="
 
-# Restart firewall
-echo "[1/3] Restarting firewall service..."
-sudo systemctl restart aura-firewall
+# Fix firewall service
+sudo tee /etc/systemd/system/aura-firewall.service > /dev/null << 'SERVICE'
+[Unit]
+Description=Aura Linux AI Firewall
+After=network-online.target ollama.service
+Wants=ollama.service
 
-# Reload threat feeds
-echo "[2/3] Reloading threat feeds..."
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/firewall_daemon.py
+Restart=always
+RestartSec=10
+User=root
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
+# Start and enable Ollama
+sudo systemctl enable ollama
+sudo systemctl start ollama
+
+# Download threat feeds
 sudo python3 /usr/local/bin/threat_intel.py
 
-# Show status
-echo "[3/3] Current status:"
-sudo systemctl status aura-firewall --no-pager
+# Download AI model
+ollama pull llama3.2:1b
 
-echo ""
-echo "If problems persist, run:"
-echo "  sudo journalctl -u aura-firewall -n 50"
+# Reload and restart firewall
+sudo systemctl daemon-reload
+sudo systemctl enable aura-firewall
+sudo systemctl start aura-firewall
+
+echo "=========================================="
+echo "   Quick Fix Complete!"
+echo "=========================================="
+echo "Test with: aura health"
